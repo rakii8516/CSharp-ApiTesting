@@ -1,0 +1,63 @@
+using System;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
+using NUnit.Framework;
+
+namespace ApiTesting
+{
+    [TestFixture]
+    public class CategoryApiTests
+    {
+        private HttpClient _client;
+        private string _url = "https://api.tmsandbox.co.nz/v1/Categories/6327/Details.json?catalogue=false";
+
+        [SetUp]
+        public void SetUp()
+        {
+            _client = new HttpClient();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _client.Dispose();
+        }
+
+        [Test]
+        public async Task TestCategoryDetails()
+        {
+            // Act: Send a GET request to the API endpoint
+            HttpResponseMessage response = await _client.GetAsync(_url);
+            Assert.That(response.IsSuccessStatusCode, "True");
+           
+
+            // Parse the JSON response
+            string jsonResponse = await response.Content.ReadAsStringAsync();
+            JObject data = JObject.Parse(jsonResponse);
+
+            // Assert: Check the 'Name' field
+            string name = data["Name"]?.ToString();
+            Assert.That(name, Is.EqualTo("Carbon credits"));
+           
+            // Assert: Check the 'CanRelist' field
+            bool canRelist = data["CanRelist"]?.ToObject<bool>() ?? false;
+            Assert.That(canRelist, "CanRelist is not true.");
+
+            // Assert: Check the 'Promotions' array for 'Gallery' promotion
+            bool galleryDescriptionCorrect = false;
+
+            foreach (var promotion in data["Promotions"])
+            {
+                if (promotion["Name"]?.ToString() == "Gallery")
+                {
+                    string description = promotion["Description"]?.ToString();
+                    galleryDescriptionCorrect = description?.Contains("Good position in category") ?? false;
+                    break;
+                }
+            }
+
+            Assert.That(galleryDescriptionCorrect, "True");
+        }
+    }
+}
